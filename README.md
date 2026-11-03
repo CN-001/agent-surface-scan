@@ -24,12 +24,13 @@ Coding agents trust repository text as instructions. Attackers have moved from a
 - **[Claude Code](hooks/claude-code-hook.mjs) and [Codex](hooks/codex-hook.ps1) hooks** — block the agent from reading flagged files
 - **[DSH plugin](dsh/)** (`agentscan-dsh`) — the `surface_scan` tool + `agentscan` skill inside DeepSeek Harness
 - **[Benchmark cases](bench/)** modeled on real-world incidents, enforced in CI
+- **[False-positive report](docs/false-positive-report.md)** on real repositories: 0 high/critical findings on gin, express, flask, axios and fastapi
 - Pure Go standard library — no runtime dependencies; builds to one binary
 
 ## Install
 
 ```sh
-go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.0
+go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.1
 ```
 
 or build from source:

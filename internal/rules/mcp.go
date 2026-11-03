@@ -221,7 +221,7 @@ var confusableRunes = map[rune]bool{
 
 func hostOf(u string) string {
 	s := strings.TrimPrefix(strings.TrimPrefix(u, "https://"), "http://")
-	if i := strings.IndexAny(s, "/?#"); i >= 0 {
+	if i := strings.IndexAny(s, "/?#`"); i >= 0 {
 		s = s[:i]
 	}
 	if i := strings.LastIndex(s, "@"); i >= 0 {
@@ -287,6 +287,9 @@ var linkRule = Rule{
 					continue
 				}
 				if userinfoRe.MatchString(u) && !seen[i] {
+					if isExampleDomain(hostOf(u)) {
+						continue // documentation examples like https://user:pass@example.com
+					}
 					add(i+1, 0, ln, "URL carries userinfo/credentials: "+u)
 					seen[i] = true
 					continue
@@ -303,8 +306,19 @@ var linkRule = Rule{
 }
 
 var zeroWidth = map[rune]bool{
-	'\u200b': true, '\u200c': true, '\u200d': true, '\u2060': true,
+	'\u200b': true, '\u200c': true, '\u2060': true,
 	'\ufeff': true, '\u00ad': true, '\u034f': true, '\u061c': true,
+}
+
+// isExampleDomain reports documentation domains (RFC 2606) that are
+// legitimately used for examples such as https://user:pass@example.com.
+func isExampleDomain(h string) bool {
+	for _, s := range []string{"example.com", "example.org", "example.net"} {
+		if h == s || strings.HasSuffix(h, "."+s) {
+			return true
+		}
+	}
+	return false
 }
 
 // hiddenTextRule flags lines that smuggle invisible characters.

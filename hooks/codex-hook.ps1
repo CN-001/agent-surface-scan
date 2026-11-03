@@ -34,20 +34,17 @@ if (-not $bin) { $bin = 'surface-scan.exe' }
 
 $probe = & $bin version 2>$null
 if ($LASTEXITCODE -ne 0) {
-  Write-Error "[agent-surface-scan] scanner binary not found; hook allows (fail-open). Install: go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.0"
+  Write-Error "[agent-surface-scan] scanner binary not found; hook allows (fail-open). Install: go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.1"
   '{"decision":"approve"}'
   exit 0
 }
 
-# Fast path: scan only the target file (v0.2.0+). Fall back to a repository
-# scan when the binary predates single-file support or cannot read the file.
+# Scan the whole working directory and filter to the target file. The full
+# repository scan keeps path-context classification (docs/, skills/) and the
+# repository allowlist (.surface-scanignore).
 $report = $null
-$json = & $bin scan $filePath --format json --fail-on critical 2>$null | Out-String
-try { $report = $json | ConvertFrom-Json } catch { $report = $null }
-if ($null -eq $report -or $null -eq $report.findings) {
-  $json = & $bin scan $cwd --format json --fail-on critical 2>$null | Out-String
-  try { $report = $json | ConvertFrom-Json } catch { '{"decision":"approve"}'; exit 0 }
-}
+$json = & $bin scan $cwd --format json --fail-on critical 2>$null | Out-String
+try { $report = $json | ConvertFrom-Json } catch { '{"decision":"approve"}'; exit 0 }
 
 $target = $filePath.Replace('/', '\').ToLowerInvariant()
 $base = $cwd.TrimEnd('\').ToLowerInvariant()

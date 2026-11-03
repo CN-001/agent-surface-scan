@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-11-03
+
+### Fixed
+
+- Rule tuning driven by a real-repository false-positive run (see `docs/false-positive-report.md`): **0 high/critical findings** on gin, express, flask, axios and fastapi.
+- `AGX-001`: package-manager patterns require an install verb + argument tokens + URL (markdown badges/links no longer fire); loopback URLs ignored.
+- `AGE-001`: dropped generic words (`secrets`, `credentials`, `passwords`) from the secret+URL pattern, excluded dots from the window (`api_key.py` no longer fires), verbs require a trailing space (`@app.webhooks.post(...)` no longer fires).
+- `AGI-002`: removed bare `debug mode`.
+- `AGS-002` (new, medium): JWT-shaped tokens split out of the critical `AGS-001` (tutorial examples).
+- `AGEV-003`: ZWJ (U+200D) excluded so emoji sequences no longer fire.
+- `AGD-001`: RFC 2606 example domains (`user:pass@example.com`) no longer flagged.
+- `docs/` discovery is segment-based so single-file scans of nested docs classify correctly.
+- Claude/Codex hooks scan the full working directory again (keeps path-context rules and the repository allowlist).
+
+### Added
+
+- `docs/false-positive-report.md` with methodology, before/after numbers and per-rule verdicts.
+- `bench/fp-run.ps1` reproduces the report on demand.
+
 ## [0.2.0] - 2026-11-03
 
 ### Added

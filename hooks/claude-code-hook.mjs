@@ -68,34 +68,24 @@ const bin =
 
 const probe = spawnSync(bin, ["version"], { timeout: 5000 });
 if (probe.error || probe.status !== 0) {
-  process.stderr.write("[agent-surface-scan] scanner binary not found; hook allows (fail-open). Install with: go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.0\n");
+  process.stderr.write("[agent-surface-scan] scanner binary not found; hook allows (fail-open). Install with: go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.1\n");
   allow();
 }
 
-// Fast path: scan only the target file (supported since v0.2.0).
-// Fall back to a full repository scan when the binary predates single-file
-// support or cannot read the file.
-const runScan = (target) =>
-  spawnSync(bin, ["scan", target, "--format", "json", "--fail-on", "critical"], {
-    timeout: 20000,
-    maxBuffer: 16 * 1024 * 1024,
-  });
+// Scan the whole working directory and filter to the target file. The full
+// repository scan keeps path-context classification (docs/, skills/) and the
+// repository allowlist (.surface-scanignore).
+const res = spawnSync(bin, ["scan", cwd, "--format", "json", "--fail-on", "critical"], {
+  timeout: 20000,
+  maxBuffer: 16 * 1024 * 1024,
+});
 
-let res = runScan(filePath);
 let report = null;
 try {
   report = JSON.parse((res.stdout || "").toString("utf8"));
 } catch {
-  report = null;
-}
-if (!report || typeof report.findings !== "object") {
-  res = runScan(cwd);
-  try {
-    report = JSON.parse((res.stdout || "").toString("utf8"));
-  } catch {
-    // unreadable output: do not block
-    allow();
-  }
+  // unreadable output: do not block
+  allow();
 }
 
 const relTarget = relative(cwd, filePath).replaceAll("\\", "/").toLowerCase();

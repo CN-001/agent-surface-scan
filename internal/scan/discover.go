@@ -94,10 +94,20 @@ func classify(rel, base string) (model.FileKind, bool) {
 	switch {
 	case norm == "mcp.json" || norm == ".mcp.json":
 		return model.KindMCPConfig, true
-	case strings.HasPrefix(norm, "docs/") && strings.HasSuffix(lbase, ".md"):
+	case strings.HasSuffix(lbase, ".md") && hasSegment(segs, "docs"):
 		return model.KindDoc, true
 	}
 	return "", false
+}
+
+// hasSegment reports whether any path segment equals want.
+func hasSegment(segs []string, want string) bool {
+	for _, s := range segs {
+		if s == want {
+			return true
+		}
+	}
+	return false
 }
 
 // excluded reports whether a slash-separated path matches an exclusion pattern.

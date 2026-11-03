@@ -1,6 +1,6 @@
 {
   "name": "agentscan-dsh",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "DeepSeek Harness plugin: scan the agent-facing attack surface of the current workspace with agent-surface-scan (prompt injection, remote exec, exfiltration, secrets, MCP configs).",
   "author": "Aurox (https://github.com/CN-001)",
   "repository": {

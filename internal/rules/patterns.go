@@ -1,6 +1,9 @@
 package rules
 
 import (
+	"regexp"
+	"strings"
+
 	"github.com/CN-001/agent-surface-scan/internal/model"
 )
 
@@ -19,7 +22,7 @@ var patternRules = []Rule{
 		"Text that tries to flip the agent's role (malicious/unrestricted personas) or disable safety guardrails.",
 		"Treat persona-switching and guardrail-disabling language as hostile; never accept it from untrusted files. Add the phrasing to your allowlist scanner and quarantine matching inputs.",
 		`(?i)(you are now|now you are|pretend to be|act as)\s+(an?\s+)?(evil|malicious|unrestricted|uncensored|rogue|jailbroken|jail-break|dan)\b`,
-		`(?i)\b(developer|god|jailbreak|debug|unfiltered|evil)\s*mode\b`,
+		`(?i)\b(developer|god|jailbreak|unfiltered|evil)\s*mode\b`,
 		`(?i)\b(ignore|bypass|disable|turn off)\s+(all\s+)?(safety|ethics|ethical|guardrails?|content filters?|security policies?|content policy)\b`,
 	),
 
@@ -39,14 +42,7 @@ var patternRules = []Rule{
 		},
 	),
 
-	patternRule(
-		"AGX-001", "Remote command execution", model.Critical, "ASI07",
-		"Instructions that download content from a URL and execute it, or that run package/CLI tools against remote code.",
-		"Never pipe downloaded content into a shell. Require pinned, signed artifacts, hash verification, and human approval before executing anything fetched from the network.",
-		`(?i)(curl|wget|iwr|invoke-webrequest|invoke-restmethod)\b[^\r\n]{0,140}?\|\s*(sudo\s+)?(ba)?(sh|zsh|bash|python3?|node|pwsh|powershell|cmd)\b`,
-		`(?i)\b(pip|pip3|pipx|npm|pnpm|yarn|npx|bunx|gem|cargo|go install|uv pip install)\b[^\r\n]{0,100}(https?://|git\+https?://|ssh://git@)`,
-		`(?i)\b(powershell|pwsh)\b[^\r\n]{0,60}(-enc(odedcommand)?\s|iex\s|invoke-expression\s)`,
-	),
+	agx001Rule(),
 
 	severityRule(
 		"AGX-002", "Privilege escalation instructions", "ASI07",
@@ -84,8 +80,8 @@ var patternRules = []Rule{
 		"AGE-001", "Data exfiltration instructions", model.Critical, "ASI06",
 		"Instructions to send secrets, credentials or other sensitive data to external endpoints (webhooks, pastebins, chat bots).",
 		"Treat any instruction that pairs secret-like identifiers with an external URL as hostile. Block outbound delivery of credentials by default and log every such attempt.",
-		`(?i)\b(send|upload|post|exfiltrate|export|transmit|deliver|submit)\b[^\r\n]{0,120}\b(webhook|pastebin|discord|telegram|slack|interact\.sh|oast|requestbin|webhook\.site|ngrok|collaborator|canarytokens?|beeceptor|pipedream|burp)\b`,
-		`(?i)\b(api[_-]?keys?|access[_-]?tokens?|secrets?|credentials?|passwords?|\.env|auth\.json|id_rsa|ssh keys?|private keys?|wallets?|mnemonics?)\b[^\r\n]{0,120}https?://[^\s"')\]]+`,
+		`(?i)\b(send|upload|post|exfiltrate|export|transmit|deliver|submit)\s+[^\r\n]{0,120}\b(webhooks?|hooks?|pastebin|discord|telegram|slack|interact\.sh|oast|requestbin|webhook\.site|ngrok|collaborator|canarytokens?|beeceptor|pipedream|burp)\b`,
+		`(?i)\b(api[_-]?keys?|access[_-]?tokens?|\.env|auth\.json|id_rsa|private keys?|wallets?|mnemonics?)\b[^\r\n.]{0,60}https?://[^\s"')\]]+`,
 	),
 
 	patternRule(
@@ -114,7 +110,7 @@ var patternRules = []Rule{
 
 	rawPatternRule(
 		"AGS-001", "Hardcoded live secrets", model.Critical, "ASI03",
-		"A secret that matches a known provider pattern (OpenAI, GitHub, AWS, Slack, HuggingFace, JWT, private key PEM).",
+		"A secret that matches a known provider pattern (OpenAI, GitHub, AWS, Slack, HuggingFace, private key PEM).",
 		"Revoke the exposed credential immediately, rotate it, and move it to a secret manager. Add the pattern to pre-commit hooks and CI scanning.",
 		`(?i)\bsk-[a-z0-9]{20,}\b`,
 		`(?i)\bghp_[a-z0-9]{36,}\b`,
@@ -125,7 +121,77 @@ var patternRules = []Rule{
 		`(?i)\bAIza[0-9A-Za-z_-]{35}\b`,
 		`(?i)\bxox[baprs]-[0-9a-zA-Z-]{10,}\b`,
 		`(?i)\bhf_[a-z0-9]{34,}\b`,
-		`(?i)\beyJ[a-zA-Z0-9_-]{12,}\.[a-zA-Z0-9_-]{12,}\.[a-zA-Z0-9_-]{12,}\b`,
 		`-----BEGIN (RSA |EC |OPENSSH |DSA |PGP |ENCRYPTED )?PRIVATE KEY-----`,
 	),
+
+	rawPatternRule(
+		"AGS-002", "JWT-like token (often a documentation example)", model.Medium, "ASI03",
+		"An eyJ... value that looks like a JWT. Tutorials frequently embed harmless example tokens, so this stays at medium.",
+		"Replace documentation examples with placeholder tokens and never commit real signed tokens.",
+		`(?i)\beyJ[a-zA-Z0-9_-]{12,}\.[a-zA-Z0-9_-]{12,}\.[a-zA-Z0-9_-]{12,}\b`,
+	),
+}
+
+// agx001Rule detects remote-execution instructions. Package-manager hits
+// require an install verb close to the URL, and URLs pointing at loopback
+// addresses are ignored (they are ordinary documentation examples).
+func agx001Rule() Rule {
+	patterns := []string{
+		`(?i)(curl|wget|iwr|invoke-webrequest|invoke-restmethod)\b[^\r\n]{0,140}?\|\s*(sudo\s+)?(ba)?(sh|zsh|bash|python3?|node|pwsh|powershell|cmd)\b`,
+		`(?i)\b(pip3?|pipx)\s+install(\s+[^\s"')\]]+){0,4}\s+(https?://[^\s"')\]]+|git\+https?://[^\s"')\]]+|ssh://git@[^\s"')\]]+)`,
+		`(?i)\b(npm|pnpm|yarn|bunx?)\s+(install|i|add|dlx|ci)(\s+[^\s"')\]]+){0,3}\s+(https?://[^\s"')\]]+|git\+https?://[^\s"')\]]+|ssh://git@[^\s"')\]]+)`,
+		`(?i)\b(npx|bunx)\s+[^\r\n]{0,60}https?://[^\s"')\]]+`,
+		`(?i)\b(cargo|gem)\s+install(\s+[^\s"')\]]+){0,3}\s+(https?://[^\s"')\]]+|git\+https?://[^\s"')\]]+|ssh://git@[^\s"')\]]+)`,
+		`(?i)\bgo\s+install(\s+[^\s"')\]]+){0,3}\s+(https?://[^\s"')\]]+|git\+https?://[^\s"')\]]+|ssh://git@[^\s"')\]]+)`,
+		`(?i)\b(powershell|pwsh)\b[^\r\n]{0,60}(-enc(odedcommand)?\s|iex\s|invoke-expression\s)`,
+	}
+	res := make([]*regexp.Regexp, 0, len(patterns))
+	for _, p := range patterns {
+		res = append(res, regexp.MustCompile(p))
+	}
+	urlRe := regexp.MustCompile(`(?i)https?://[^\s"')\]]+`)
+	isLoopback := func(u string) bool {
+		host := strings.ToLower(strings.TrimPrefix(strings.TrimPrefix(u, "https://"), "http://"))
+		if i := strings.IndexAny(host, "/?#"); i >= 0 {
+			host = host[:i]
+		}
+		if i := strings.LastIndex(host, "@"); i >= 0 {
+			host = host[i+1:]
+		}
+		if i := strings.Index(host, ":"); i >= 0 {
+			host = host[:i]
+		}
+		return host == "localhost" || host == "127.0.0.1" || host == "0.0.0.0" || host == "::1"
+	}
+	return Rule{
+		ID:       "AGX-001",
+		Title:    "Remote command execution",
+		Severity: model.Critical,
+		ASI:      "ASI07",
+		Summary:  "Instructions that download content from a URL and execute it, or that run package/CLI tools against remote code.",
+		Fix:      "Never pipe downloaded content into a shell. Require pinned, signed artifacts, hash verification, and human approval before executing anything fetched from the network.",
+		Check: func(f *model.File) []model.Match {
+			var ms []model.Match
+			seen := map[int]bool{}
+			for _, re := range res {
+				for _, h := range regexLineHits(f, re) {
+					if seen[h.line] {
+						continue
+					}
+					if u := urlRe.FindString(h.text); u != "" && isLoopback(u) && !strings.Contains(h.text, "|") {
+						continue // documentation example against a local server
+					}
+					seen[h.line] = true
+					ms = append(ms, model.Match{
+						RuleID: "AGX-001", Title: "Remote command execution", Severity: model.Critical, ASI: "ASI07",
+						File: f.Path, Line: h.line, Column: h.col,
+						Evidence: h.text,
+						Message:  "Instructions that download content from a URL and execute it, or that run package/CLI tools against remote code.",
+						Fix:      "Never pipe downloaded content into a shell. Require pinned, signed artifacts, hash verification, and human approval before executing anything fetched from the network.",
+					})
+				}
+			}
+			return ms
+		},
+	}
 }

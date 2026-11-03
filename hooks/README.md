@@ -19,7 +19,7 @@ Behavior:
 1. Build/install the scanner once:
 
 ```sh
-go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.0
+go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.1
 ```
 
 2. Claude Code — add to `~/.claude/settings.json`:

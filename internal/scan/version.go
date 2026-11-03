@@ -1,4 +1,4 @@
 package scan
 
 // Version is the scanner version, bumped on releases.
-const Version = "0.2.0"
+const Version = "0.2.1"

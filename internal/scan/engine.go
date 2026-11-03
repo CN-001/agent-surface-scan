@@ -50,10 +50,11 @@ func Run(root string, opts Options) (*Report, error) {
 }
 
 // scanSingleFile loads one file and prepares it for scanning when it is
-// agent-facing. Non-agent-facing files produce an empty scan.
+// agent-facing. Non-agent-facing files produce an empty scan. Classification
+// uses the full path so nested conventions (docs/, skills/) still apply.
 func scanSingleFile(abs string, opts Options) ([]model.File, error) {
 	rel := filepath.ToSlash(filepath.Base(abs))
-	kind, ok := classify(rel, filepath.Base(abs))
+	kind, ok := classify(filepath.ToSlash(abs), filepath.Base(abs))
 	if !ok || excluded(rel, opts.Exclude) {
 		return nil, nil
 	}
