@@ -1,7 +1,7 @@
 package rules
 
 import (
-	"agent-surface-scan/internal/model"
+	"github.com/CN-001/agent-surface-scan/internal/model"
 )
 
 // patternRules are the regexp-driven detectors (one per conceptual attack).

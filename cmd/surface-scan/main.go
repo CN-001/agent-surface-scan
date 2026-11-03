@@ -10,9 +10,9 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"agent-surface-scan/internal/model"
-	"agent-surface-scan/internal/rules"
-	"agent-surface-scan/internal/scan"
+	"github.com/CN-001/agent-surface-scan/internal/model"
+	"github.com/CN-001/agent-surface-scan/internal/rules"
+	"github.com/CN-001/agent-surface-scan/internal/scan"
 )
 
 func main() {
@@ -57,6 +57,7 @@ Scan flags (may appear before or after the path):
   --fail-on <severity>                exit code 2 when any finding is at least
                                       this severe (default: high)
   --max-size <MB>                     skip files larger than N MiB (default: 1)
+  --exclude <pattern[,pattern...]>    exclude paths (glob or prefix, e.g. testdata,docs)
   --list                              print discovered files and exit
 `)
 }
@@ -66,6 +67,7 @@ func cmdScan(args []string) int {
 	outPath := ""
 	failOn := "high"
 	maxMB := 1.0
+	exclude := ""
 	list := false
 	var pos []string
 
@@ -109,6 +111,12 @@ func cmdScan(args []string) int {
 				return 2
 			}
 			maxMB = f
+		case "--exclude":
+			v, ok := need("exclude")
+			if !ok {
+				return 2
+			}
+			exclude = v
 		case "--list":
 			list = true
 		case "-h", "--help":
@@ -144,8 +152,15 @@ func cmdScan(args []string) int {
 	}
 
 	opts := scan.Options{MaxSizeBytes: int64(maxMB * 1024 * 1024)}
+	if exclude != "" {
+		for _, p := range strings.Split(exclude, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				opts.Exclude = append(opts.Exclude, p)
+			}
+		}
+	}
 	if list {
-		files, skipped, err := scan.Discover(abs, opts.MaxSizeBytes)
+		files, skipped, err := scan.Discover(abs, opts)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return 1
@@ -228,7 +243,7 @@ jobs:
 
       - name: Build surface-scan
         run: |
-          git clone --depth 1 https://github.com/<OWNER>/agent-surface-scan.git /tmp/agent-surface-scan
+          git clone --depth 1 https://github.com/CN-001/agent-surface-scan.git /tmp/agent-surface-scan
           cd /tmp/agent-surface-scan
           go build -o "$RUNNER_TEMP/surface-scan" ./cmd/surface-scan
 
@@ -266,7 +281,7 @@ func cmdInitCI(args []string) int {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
-	fmt.Printf("wrote %s (replace <OWNER> with the scanner's GitHub owner)\n", dest)
+	fmt.Printf("wrote %s (template for https://github.com/CN-001/agent-surface-scan)\n", dest)
 	return 0
 }
 

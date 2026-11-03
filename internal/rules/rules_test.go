@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"agent-surface-scan/internal/model"
+	"github.com/CN-001/agent-surface-scan/internal/model"
 )
 
 func mkFile(kind model.FileKind, content string) *model.File {

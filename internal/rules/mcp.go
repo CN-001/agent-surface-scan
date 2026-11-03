@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"agent-surface-scan/internal/model"
+	"github.com/CN-001/agent-surface-scan/internal/model"
 )
 
 // mcpServer is the subset of an MCP client config entry we care about.

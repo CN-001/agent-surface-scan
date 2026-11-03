@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"agent-surface-scan/internal/model"
+	"github.com/CN-001/agent-surface-scan/internal/model"
 )
 
 // Rule is one detector run against every discovered agent-facing file.

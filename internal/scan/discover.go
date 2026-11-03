@@ -2,17 +2,19 @@ package scan
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
 	"unicode/utf8"
 
-	"agent-surface-scan/internal/model"
+	"github.com/CN-001/agent-surface-scan/internal/model"
 )
 
 // Options controls a scan.
 type Options struct {
-	MaxSizeBytes int64 // skip files larger than this (0 = default 1 MiB)
+	MaxSizeBytes int64    // skip files larger than this (0 = default 1 MiB)
+	Exclude      []string // path patterns to exclude (slash-separated, glob allowed)
 }
 
 // DefaultMaxSizeBytes is the default per-file size limit.
@@ -84,8 +86,27 @@ func isSkillPath(norm string) bool {
 	return false
 }
 
+// excluded reports whether a slash-separated path matches an exclusion pattern.
+// A pattern without globs also matches the whole subtree below that prefix.
+func excluded(rel string, pats []string) bool {
+	for _, p := range pats {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if p == rel || strings.HasPrefix(rel, strings.TrimSuffix(p, "/")+"/") {
+			return true
+		}
+		if ok, err := path.Match(p, rel); err == nil && ok {
+			return true
+		}
+	}
+	return false
+}
+
 // Discover walks root and returns every agent-facing file plus skipped paths.
-func Discover(root string, maxSize int64) ([]model.File, []string, error) {
+func Discover(root string, opts Options) ([]model.File, []string, error) {
+	maxSize := opts.MaxSizeBytes
 	if maxSize <= 0 {
 		maxSize = DefaultMaxSizeBytes
 	}
@@ -107,6 +128,9 @@ func Discover(root string, maxSize int64) ([]model.File, []string, error) {
 		}
 		kind, ok := classify(filepath.ToSlash(rel), d.Name())
 		if !ok {
+			return nil
+		}
+		if excluded(filepath.ToSlash(rel), opts.Exclude) {
 			return nil
 		}
 		info, ierr := d.Info()

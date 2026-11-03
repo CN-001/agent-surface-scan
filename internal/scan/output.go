@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"agent-surface-scan/internal/model"
-	"agent-surface-scan/internal/rules"
+	"github.com/CN-001/agent-surface-scan/internal/model"
+	"github.com/CN-001/agent-surface-scan/internal/rules"
 )
 
 // RenderText writes a plain-text report.
@@ -217,7 +217,7 @@ func RenderSARIF(w io.Writer, rep *Report) error {
 	var r run
 	r.Tool.Driver.Name = "agent-surface-scan"
 	r.Tool.Driver.Version = Version
-	r.Tool.Driver.InformationURI = "https://github.com/agent-surface-scan"
+	r.Tool.Driver.InformationURI = "https://github.com/CN-001/agent-surface-scan"
 	for i, ru := range all {
 		idx[ru.ID] = i
 		var d rule
