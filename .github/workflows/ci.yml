@@ -31,4 +31,4 @@ jobs:
         run: go build -o surface-scan ./cmd/surface-scan
 
       - name: dogfood scan
-        run: ./surface-scan scan . --exclude testdata --fail-on high
+        run: ./surface-scan scan . --exclude testdata,bench --fail-on high

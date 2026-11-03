@@ -13,7 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 17 detection rules mapped to the OWASP Agentic Security Initiative (ASI) taxonomy.
 - Discovery of agent-facing files: `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, `COPILOT.md`, README, CONTRIBUTING, SECURITY, issue/PR templates, skills (`SKILL.md`), MCP configs (`.mcp.json`, `.cursor/mcp.json`, `mcp.json`) and `docs/**`.
 - Output formats: text, Markdown, JSON, SARIF 2.1.0.
-- `--fail-on` CI gate with exit codes, `--max-size`, `--exclude`, `--list`.
-- Inline suppression markers: `surface-scan:ignore`, `surface-scan:ignore-file`.
+- `--fail-on` CI gate with exit codes, `--max-size`, `--exclude`, `--list`, `--allowlist`.
+- Inline suppression markers: `surface-scan:ignore`, `surface-scan:ignore-file`; allowlist file `.surface-scanignore`.
 - `init-ci` command generating a GitHub Actions workflow.
-- Malicious/benign regression corpus and unit tests.
+- Claude Code and Codex CLI PreToolUse hooks that block reads of flagged files.
+- DeepSeek Harness plugin (`agentscan-dsh`) exposing the `surface_scan` tool and `agentscan` skill.
+- Malicious/benign regression corpus, real-world-inspired benchmark cases, and unit tests.
+- CI workflow: gofmt, vet, test, build, dogfood scan.

@@ -17,10 +17,12 @@ Coding agents trust repository text as instructions. Attackers have moved from a
 - **17 rules** mapped to the OWASP Agentic Security Initiative (ASI) taxonomy
 - Discovers 6 classes of agent-facing files (instructions, README, contributing/security docs, issue/PR templates, skills, MCP configs, docs)
 - Four output formats: **text, Markdown, JSON, SARIF 2.1.0** (upload straight to GitHub Code Scanning)
-- `--fail-on` CI gate with exit codes; `--exclude` path patterns
+- `--fail-on` CI gate with exit codes; `--exclude` path patterns; `.surface-scanignore` allowlist
 - Inline suppression markers (`surface-scan:ignore`, `surface-scan:ignore-file`)
+- **[Claude Code](hooks/claude-code-hook.mjs) and [Codex](hooks/codex-hook.ps1) hooks** — block the agent from reading flagged files
+- **[DSH plugin](dsh/)** (`agentscan-dsh`) — the `surface_scan` tool + `agentscan` skill inside DeepSeek Harness
+- **[Benchmark cases](bench/)** modeled on real-world incidents, enforced in CI
 - Pure Go standard library — no runtime dependencies; builds to one binary
-- Ships with a malicious/benign corpus and unit tests that guard the rules
 
 ## Install
 
@@ -50,6 +52,11 @@ surface-scan scan . --list
 
 # exclude fixtures and vendored docs
 surface-scan scan . --exclude testdata,examples
+
+# allowlist: .surface-scanignore lines are "<pattern> <ruleID|*>"
+#   testdata *
+#   docs/legacy AGI-003
+surface-scan scan . --allowlist .surface-scanignore
 
 # generate a GitHub Actions workflow for this repo
 surface-scan init-ci
@@ -99,6 +106,15 @@ README.md
 | AGC-003 | low | ASI05 | Unparseable MCP config |
 | AGC-004 | low | ASI03 | MCP server with no permission scoping |
 
+## Integrations
+
+| Integration | Where | What it does |
+|---|---|---|
+| GitHub Actions / Code Scanning | `surface-scan init-ci` | CI gate + SARIF upload |
+| Claude Code | [hooks/claude-code-hook.mjs](hooks/claude-code-hook.mjs) | denies `Read`/`Edit`/`Write` on flagged files |
+| OpenAI Codex CLI | [hooks/codex-hook.ps1](hooks/codex-hook.ps1) | blocks `Read`/`Edit` on flagged files |
+| DeepSeek Harness | [dsh/](dsh) | `surface_scan` tool + `agentscan` skill |
+
 ## Layout
 
 ```
@@ -108,6 +124,9 @@ internal/rules        rule engine (17 rules, OWASP ASI mapping)
 internal/scan         file discovery, engine, report rendering
 testdata/corpus       malicious / benign regression corpus
 testdata/repo         end-to-end demo repository
+bench/cases           real-world-inspired benchmark cases
+hooks/                Claude Code + Codex hook scripts
+dsh/                  DeepSeek Harness plugin (agentscan-dsh)
 ```
 
 ## Development
@@ -120,10 +139,11 @@ gofmt -l .
 
 ## Roadmap
 
-- [ ] DSH plugin form (`agentscan-dsh`): scan the current workspace from inside DeepSeek Harness
-- [ ] Codex / Claude Code hooks: warn before an agent reads a dangerous file
-- [ ] Coverage benchmark against real-world poisoned samples + false-positive report on large repos
-- [ ] `--allowlist` for files with a recorded review decision
+- [x] DSH plugin (`agentscan-dsh`): `surface_scan` tool + skill inside DeepSeek Harness
+- [x] Codex / Claude Code hooks: warn before an agent reads a dangerous file
+- [x] Benchmark cases modeled on real-world poisoned-context incidents
+- [ ] Coverage benchmark against a larger public corpus + false-positive report on big repos
+- [ ] `--allowlist` review workflow UI (record who reviewed what)
 
 ## Security & scope
 

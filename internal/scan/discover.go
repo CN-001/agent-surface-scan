@@ -13,8 +13,9 @@ import (
 
 // Options controls a scan.
 type Options struct {
-	MaxSizeBytes int64    // skip files larger than this (0 = default 1 MiB)
-	Exclude      []string // path patterns to exclude (slash-separated, glob allowed)
+	MaxSizeBytes  int64    // skip files larger than this (0 = default 1 MiB)
+	Exclude       []string // path patterns to exclude (slash-separated, glob allowed)
+	AllowlistPath string   // .surface-scanignore style file ("" disables)
 }
 
 // DefaultMaxSizeBytes is the default per-file size limit.
@@ -56,34 +57,44 @@ func classify(rel, base string) (model.FileKind, bool) {
 		return model.KindSecurity, true
 	}
 	norm := strings.ReplaceAll(rel, "\\", "/")
+	segs := strings.Split(norm, "/")
+
+	// SKILL.md under any directory named skills/ (or agent-scoped skill dirs).
+	if strings.EqualFold(base, "SKILL.md") {
+		for _, s := range segs[:len(segs)-1] {
+			if s == "skills" || s == ".claude" || s == ".cursor" || s == ".agents" || s == ".codex" || s == ".dsh" {
+				return model.KindSkill, true
+			}
+		}
+	}
+
+	// .github and .cursor conventions at any depth.
+	for i, s := range segs {
+		rest := strings.Join(segs[i+1:], "/")
+		switch {
+		case s == ".github" && (rest == "copilot-instructions.md" || rest == "AGENTS.md"):
+			return model.KindInstructions, true
+		case s == ".github" && strings.HasPrefix(rest, "ISSUE_TEMPLATE/") &&
+			(strings.HasSuffix(lbase, ".md") || strings.HasSuffix(lbase, ".yml") || strings.HasSuffix(lbase, ".yaml")):
+			return model.KindIssueTemplate, true
+		case s == ".github" && strings.HasPrefix(rest, "PULL_REQUEST_TEMPLATE") &&
+			(strings.HasSuffix(lbase, ".md") || strings.HasSuffix(lbase, ".yml") || strings.HasSuffix(lbase, ".yaml")):
+			return model.KindPRTemplate, true
+		case s == ".cursor" && strings.HasPrefix(rest, "rules/") &&
+			(strings.HasSuffix(lbase, ".md") || strings.HasSuffix(lbase, ".mdc")):
+			return model.KindInstructions, true
+		case s == ".cursor" && rest == "mcp.json":
+			return model.KindMCPConfig, true
+		}
+	}
+
 	switch {
-	case norm == ".cursor/mcp.json":
+	case norm == "mcp.json" || norm == ".mcp.json":
 		return model.KindMCPConfig, true
-	case norm == "mcp.json":
-		return model.KindMCPConfig, true
-	case norm == ".github/copilot-instructions.md", norm == ".github/AGENTS.md":
-		return model.KindInstructions, true
-	case strings.HasPrefix(norm, ".cursor/rules/") && (strings.HasSuffix(base, ".md") || strings.HasSuffix(base, ".mdc")):
-		return model.KindInstructions, true
-	case strings.HasPrefix(norm, ".github/ISSUE_TEMPLATE/") && (strings.HasSuffix(lbase, ".md") || strings.HasSuffix(lbase, ".yml") || strings.HasSuffix(lbase, ".yaml")):
-		return model.KindIssueTemplate, true
-	case strings.HasPrefix(norm, ".github/PULL_REQUEST_TEMPLATE") && (strings.HasSuffix(lbase, ".md") || strings.HasSuffix(lbase, ".yml") || strings.HasSuffix(lbase, ".yaml")):
-		return model.KindPRTemplate, true
-	case strings.EqualFold(base, "SKILL.md") && isSkillPath(norm):
-		return model.KindSkill, true
 	case strings.HasPrefix(norm, "docs/") && strings.HasSuffix(lbase, ".md"):
 		return model.KindDoc, true
 	}
 	return "", false
-}
-
-func isSkillPath(norm string) bool {
-	for _, prefix := range []string{"skills/", ".claude/skills/", ".cursor/skills/", ".agents/skills/", ".codex/skills/", ".dsh/skills/"} {
-		if strings.HasPrefix(norm, prefix) {
-			return true
-		}
-	}
-	return false
 }
 
 // excluded reports whether a slash-separated path matches an exclusion pattern.

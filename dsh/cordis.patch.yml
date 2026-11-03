@@ -1,0 +1,7 @@
+- insert:
+    - id: agentscan
+      name: agentscan-dsh
+      config:
+        binaryPath: ''
+        registerSkill: true
+        maxOutputChars: 20000

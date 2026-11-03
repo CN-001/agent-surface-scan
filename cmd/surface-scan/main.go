@@ -58,6 +58,7 @@ Scan flags (may appear before or after the path):
                                       this severe (default: high)
   --max-size <MB>                     skip files larger than N MiB (default: 1)
   --exclude <pattern[,pattern...]>    exclude paths (glob or prefix, e.g. testdata,docs)
+  --allowlist <file|none>             allowlist file (default: .surface-scanignore)
   --list                              print discovered files and exit
 `)
 }
@@ -68,6 +69,7 @@ func cmdScan(args []string) int {
 	failOn := "high"
 	maxMB := 1.0
 	exclude := ""
+	allowlist := ".surface-scanignore"
 	list := false
 	var pos []string
 
@@ -117,6 +119,12 @@ func cmdScan(args []string) int {
 				return 2
 			}
 			exclude = v
+		case "--allowlist":
+			v, ok := need("allowlist")
+			if !ok {
+				return 2
+			}
+			allowlist = v
 		case "--list":
 			list = true
 		case "-h", "--help":
@@ -158,6 +166,9 @@ func cmdScan(args []string) int {
 				opts.Exclude = append(opts.Exclude, p)
 			}
 		}
+	}
+	if allowlist != "none" && allowlist != "" {
+		opts.AllowlistPath = allowlist
 	}
 	if list {
 		files, skipped, err := scan.Discover(abs, opts)

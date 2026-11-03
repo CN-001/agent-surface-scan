@@ -1,0 +1,55 @@
+{
+  "name": "agentscan-dsh",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness plugin: scan the agent-facing attack surface of the current workspace with agent-surface-scan (prompt injection, remote exec, exfiltration, secrets, MCP configs).",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CN-001/agent-surface-scan.git"
+  },
+  "homepage": "https://github.com/CN-001/agent-surface-scan#readme",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "ai-security",
+    "prompt-injection",
+    "agent-security",
+    "mcp-security",
+    "sarif"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "^0.2.0-rc.1 || ^0.2.1-rc.1",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/schemastery": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}

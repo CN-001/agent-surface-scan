@@ -2,6 +2,8 @@ package scan
 
 import (
 	"fmt"
+	"os"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -18,6 +20,7 @@ type Report struct {
 	FileKinds map[model.FileKind]int
 	Skipped   []string
 	Matches   []model.Match
+	Ignored   int // matches suppressed by markers or the allowlist
 	Score     int
 	Risk      model.Severity
 	RuleStats map[string]int
@@ -47,7 +50,7 @@ func Run(root string, opts Options) (*Report, error) {
 			rep.Matches = append(rep.Matches, r.Check(&files[i])...)
 		}
 	}
-	rep.Matches = applyIgnores(files, rep.Matches)
+	rep.Matches, rep.Ignored = applyIgnores(files, loadAllowlist(root, opts.AllowlistPath), rep.Matches)
 
 	for _, m := range rep.Matches {
 		rep.Score += m.Severity.Weight()
@@ -75,11 +78,54 @@ type fileIgnores struct {
 	lines map[int]bool
 }
 
-// applyIgnores drops matches suppressed by surface-scan:ignore markers.
+// allowlistRule matches a glob/prefix pattern to a rule id ("*" = any rule).
+type allowlistRule struct {
+	pattern string
+	rule    string
+}
+
+// loadAllowlist reads a .surface-scanignore file (empty result when absent).
+//
+// Format: one rule per line, `#` starts a comment.
+//
+//	<pattern> [<ruleID>|*]
+//
+// Example:
+//
+//	testdata *
+//	docs/legacy AGI-003
+func loadAllowlist(root, file string) []allowlistRule {
+	if file == "" {
+		return nil
+	}
+	if !path.IsAbs(file) {
+		file = path.Join(root, file)
+	}
+	raw, err := os.ReadFile(file)
+	if err != nil {
+		return nil
+	}
+	var out []allowlistRule
+	for _, line := range strings.Split(string(raw), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Fields(line)
+		rule := "*"
+		if len(fields) >= 2 {
+			rule = fields[1]
+		}
+		out = append(out, allowlistRule{pattern: fields[0], rule: rule})
+	}
+	return out
+}
+
+// applyIgnores drops matches suppressed by inline markers or the allowlist.
 //
 //	# surface-scan:ignore            ignores findings on this line
 //	# surface-scan:ignore-file       ignores all findings in this file
-func applyIgnores(files []model.File, ms []model.Match) []model.Match {
+func applyIgnores(files []model.File, allow []allowlistRule, ms []model.Match) ([]model.Match, int) {
 	byPath := map[string]*model.File{}
 	for i := range files {
 		byPath[files[i].Path] = &files[i]
@@ -104,14 +150,34 @@ func applyIgnores(files []model.File, ms []model.Match) []model.Match {
 		cache[p] = v
 		return v
 	}
+	allowed := func(p, rule string) bool {
+		for _, a := range allow {
+			if a.rule != "*" && a.rule != rule {
+				continue
+			}
+			if a.pattern == p || strings.HasPrefix(p, strings.TrimSuffix(a.pattern, "/")+"/") {
+				return true
+			}
+			if ok, err := path.Match(a.pattern, p); err == nil && ok {
+				return true
+			}
+		}
+		return false
+	}
 	out := ms[:0]
+	ignored := 0
 	for _, m := range ms {
 		if v := ignoreFor(m.File); v.all || v.lines[m.Line] {
+			ignored++
+			continue
+		}
+		if allowed(m.File, m.RuleID) {
+			ignored++
 			continue
 		}
 		out = append(out, m)
 	}
-	return out
+	return out, ignored
 }
 
 // TopRisk returns the highest severity present, or "none" when there are no findings.
@@ -124,6 +190,6 @@ func (r *Report) TopRisk() string {
 
 // Summary builds a one-line human summary.
 func (r *Report) Summary() string {
-	return fmt.Sprintf("%d agent-facing files scanned, %d findings, score=%d, risk=%s",
-		r.Files, len(r.Matches), r.Score, r.TopRisk())
+	return fmt.Sprintf("%d agent-facing files scanned, %d findings, %d ignored, score=%d, risk=%s",
+		r.Files, len(r.Matches), r.Ignored, r.Score, r.TopRisk())
 }
