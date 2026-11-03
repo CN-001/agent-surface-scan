@@ -34,7 +34,7 @@ if (-not $bin) { $bin = 'surface-scan.exe' }
 
 $probe = & $bin version 2>$null
 if ($LASTEXITCODE -ne 0) {
-  Write-Error "[agent-surface-scan] scanner binary not found; hook allows (fail-open). Install: go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.1.0"
+  Write-Error "[agent-surface-scan] scanner binary not found; hook allows (fail-open). Install: go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.1.1"
   '{"decision":"approve"}'
   exit 0
 }

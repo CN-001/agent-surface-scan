@@ -63,121 +63,145 @@ Scan flags (may appear before or after the path):
 `)
 }
 
-func cmdScan(args []string) int {
-	format := "text"
-	outPath := ""
-	failOn := "high"
-	maxMB := 1.0
-	exclude := ""
-	allowlist := ".surface-scanignore"
-	list := false
-	var pos []string
+// scanFlags holds the parsed flags of the scan command.
+type scanFlags struct {
+	format    string
+	outPath   string
+	failOn    string
+	maxMB     float64
+	exclude   string
+	allowlist string
+	list      bool
+	help      bool
+	root      string
+}
 
-	i := 0
-	need := func(name string) (string, bool) {
-		if i+1 >= len(args) {
-			fmt.Fprintf(os.Stderr, "flag --%s requires a value\n", name)
-			return "", false
-		}
-		i++
-		return args[i], true
+func defaultScanFlags() scanFlags {
+	return scanFlags{
+		format:    "text",
+		failOn:    "high",
+		maxMB:     1.0,
+		allowlist: ".surface-scanignore",
+		root:      ".",
 	}
-	for ; i < len(args); i++ {
-		switch a := args[i]; a {
+}
+
+// parseScanArgs parses scan flags; flags may appear before or after the path.
+func parseScanArgs(args []string) (scanFlags, error) {
+	f := defaultScanFlags()
+	var pos []string
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		value := func(name string) (string, error) {
+			if i+1 >= len(args) {
+				return "", fmt.Errorf("flag --%s requires a value", name)
+			}
+			i++
+			return args[i], nil
+		}
+		switch a {
 		case "--format":
-			v, ok := need("format")
-			if !ok {
-				return 2
-			}
-			format = v
-		case "--out":
-			v, ok := need("out")
-			if !ok {
-				return 2
-			}
-			outPath = v
-		case "--fail-on":
-			v, ok := need("fail-on")
-			if !ok {
-				return 2
-			}
-			failOn = v
-		case "--max-size":
-			v, ok := need("max-size")
-			if !ok {
-				return 2
-			}
-			f, err := strconv.ParseFloat(v, 64)
+			v, err := value("format")
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				return 2
+				return f, err
 			}
-			maxMB = f
+			f.format = v
+		case "--out":
+			v, err := value("out")
+			if err != nil {
+				return f, err
+			}
+			f.outPath = v
+		case "--fail-on":
+			v, err := value("fail-on")
+			if err != nil {
+				return f, err
+			}
+			f.failOn = v
+		case "--max-size":
+			v, err := value("max-size")
+			if err != nil {
+				return f, err
+			}
+			n, perr := strconv.ParseFloat(v, 64)
+			if perr != nil {
+				return f, perr
+			}
+			f.maxMB = n
 		case "--exclude":
-			v, ok := need("exclude")
-			if !ok {
-				return 2
+			v, err := value("exclude")
+			if err != nil {
+				return f, err
 			}
-			exclude = v
+			f.exclude = v
 		case "--allowlist":
-			v, ok := need("allowlist")
-			if !ok {
-				return 2
+			v, err := value("allowlist")
+			if err != nil {
+				return f, err
 			}
-			allowlist = v
+			f.allowlist = v
 		case "--list":
-			list = true
+			f.list = true
 		case "-h", "--help":
-			usage(os.Stdout)
-			return 0
+			f.help = true
 		default:
 			if strings.HasPrefix(a, "-") {
-				fmt.Fprintf(os.Stderr, "unknown flag %s\n", a)
-				return 2
+				return f, fmt.Errorf("unknown flag %s", a)
 			}
 			pos = append(pos, a)
 		}
 	}
 	if len(pos) > 1 {
-		fmt.Fprintln(os.Stderr, "scan accepts at most one path argument")
+		return f, fmt.Errorf("scan accepts at most one path argument")
+	}
+	if len(pos) == 1 {
+		f.root = pos[0]
+	}
+	return f, nil
+}
+
+func cmdScan(args []string) int {
+	f, err := parseScanArgs(args)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		return 2
 	}
+	if f.help {
+		usage(os.Stdout)
+		return 0
+	}
 
-	threshold, err := model.ParseSeverity(failOn)
+	threshold, err := model.ParseSeverity(f.failOn)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 2
 	}
 
-	root := "."
-	if len(pos) == 1 {
-		root = pos[0]
-	}
-	abs, err := filepath.Abs(root)
+	abs, err := filepath.Abs(f.root)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
 
-	opts := scan.Options{MaxSizeBytes: int64(maxMB * 1024 * 1024)}
-	if exclude != "" {
-		for _, p := range strings.Split(exclude, ",") {
+	opts := scan.Options{MaxSizeBytes: int64(f.maxMB * 1024 * 1024)}
+	if f.exclude != "" {
+		for _, p := range strings.Split(f.exclude, ",") {
 			if p = strings.TrimSpace(p); p != "" {
 				opts.Exclude = append(opts.Exclude, p)
 			}
 		}
 	}
-	if allowlist != "none" && allowlist != "" {
-		opts.AllowlistPath = allowlist
+	if f.allowlist != "none" && f.allowlist != "" {
+		opts.AllowlistPath = f.allowlist
 	}
-	if list {
+	if f.list {
 		files, skipped, err := scan.Discover(abs, opts)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return 1
 		}
-		for _, f := range files {
-			fmt.Printf("%-12s %s\n", f.Kind, f.Path)
+		for _, file := range files {
+			fmt.Printf("%-12s %s\n", file.Kind, file.Path)
 		}
 		for _, s := range skipped {
 			fmt.Printf("skipped      %s\n", s)
@@ -192,19 +216,19 @@ func cmdScan(args []string) int {
 	}
 
 	var out *os.File
-	if outPath != "" {
-		f, ferr := os.Create(outPath)
+	if f.outPath != "" {
+		outFile, ferr := os.Create(f.outPath)
 		if ferr != nil {
 			fmt.Fprintln(os.Stderr, ferr)
 			return 1
 		}
-		defer f.Close()
-		out = f
+		defer outFile.Close()
+		out = outFile
 	} else {
 		out = os.Stdout
 	}
 
-	switch format {
+	switch f.format {
 	case "text":
 		scan.RenderText(out, rep)
 	case "markdown":
@@ -220,7 +244,7 @@ func cmdScan(args []string) int {
 			return 1
 		}
 	default:
-		fmt.Fprintf(os.Stderr, "unknown format %q\n", format)
+		fmt.Fprintf(os.Stderr, "unknown format %q\n", f.format)
 		return 2
 	}
 

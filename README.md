@@ -27,7 +27,7 @@ Coding agents trust repository text as instructions. Attackers have moved from a
 ## Install
 
 ```sh
-go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.1.0
+go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.1.1
 ```
 
 or build from source:

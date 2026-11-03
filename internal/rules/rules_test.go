@@ -110,4 +110,10 @@ func TestMCPRules(t *testing.T) {
 	if runAll(broken)["AGC-003"] == 0 {
 		t.Error("expected AGC-003 for unparseable MCP config")
 	}
+
+	// autoApprove AND alwaysAllow must both be reported (no early continue).
+	both := mkFile(model.KindMCPConfig, `{"mcpServers":{"s":{"command":"npx","args":["-y","pkg"],"autoApprove":true,"alwaysAllow":["exec"]}}}`)
+	if n := runAll(both)["AGC-002"]; n < 2 {
+		t.Errorf("expected AGC-002 twice for autoApprove + alwaysAllow, got %d", n)
+	}
 }

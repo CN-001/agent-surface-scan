@@ -101,7 +101,7 @@ func classify(rel, base string) (model.FileKind, bool) {
 // A pattern without globs also matches the whole subtree below that prefix.
 func excluded(rel string, pats []string) bool {
 	for _, p := range pats {
-		p = strings.TrimSpace(p)
+		p = strings.ReplaceAll(strings.TrimSpace(p), "\\", "/")
 		if p == "" {
 			continue
 		}
@@ -164,8 +164,9 @@ func Discover(root string, opts Options) ([]model.File, []string, error) {
 			skipped = append(skipped, rel+" (binary / non-UTF8)")
 			return nil
 		}
-		text := string(raw)
-		lines := strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
+		// Normalize line endings once so Raw and Lines share the same offsets.
+		text := strings.ReplaceAll(string(raw), "\r\n", "\n")
+		lines := strings.Split(text, "\n")
 		files = append(files, model.File{
 			Path:  filepath.ToSlash(rel),
 			Abs:   path,

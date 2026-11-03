@@ -142,7 +142,6 @@ var mcpRules = []Rule{
 						`MCP server "`+name+`" has autoApprove enabled.`,
 						"Disable autoApprove; approve tool calls per invocation.",
 						line))
-					continue
 				}
 				if len(s.AlwaysAllow) > 0 {
 					ms = append(ms, mcpMatch(f, "AGC-002", "MCP auto-approve / over-permissioned config", model.Medium, "ASI03", name,

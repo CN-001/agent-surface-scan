@@ -7,7 +7,7 @@ DeepSeek Harness 插件：把 `agent-surface-scan` 变成 agent 可以直接调�
 前置：本机已安装 `surface-scan` 二进制：
 
 ```sh
-go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.1.0
+go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.1.1
 ```
 
 从本地目录安装插件（发布前测试用）：

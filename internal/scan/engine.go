@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -28,6 +29,13 @@ type Report struct {
 
 // Run discovers agent-facing files under root and executes every rule.
 func Run(root string, opts Options) (*Report, error) {
+	info, err := os.Stat(root)
+	if err != nil {
+		return nil, fmt.Errorf("scan root %q: %w", root, err)
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("scan root %q is not a directory", root)
+	}
 	files, skipped, err := Discover(root, opts)
 	if err != nil {
 		return nil, err
@@ -98,10 +106,10 @@ func loadAllowlist(root, file string) []allowlistRule {
 	if file == "" {
 		return nil
 	}
-	if !path.IsAbs(file) {
-		file = path.Join(root, file)
+	if !filepath.IsAbs(file) {
+		file = filepath.Join(root, file)
 	}
-	raw, err := os.ReadFile(file)
+	raw, err := os.ReadFile(filepath.FromSlash(file))
 	if err != nil {
 		return nil
 	}
@@ -112,11 +120,12 @@ func loadAllowlist(root, file string) []allowlistRule {
 			continue
 		}
 		fields := strings.Fields(line)
+		pattern := strings.ReplaceAll(fields[0], "\\", "/")
 		rule := "*"
 		if len(fields) >= 2 {
 			rule = fields[1]
 		}
-		out = append(out, allowlistRule{pattern: fields[0], rule: rule})
+		out = append(out, allowlistRule{pattern: pattern, rule: rule})
 	}
 	return out
 }
