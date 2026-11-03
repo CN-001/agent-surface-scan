@@ -20,8 +20,7 @@
 //   SURFACE_SCAN_MODE  deny (default) | warn   (warn never blocks)
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { relative } from "node:path";
+import { basename, relative } from "node:path";
 
 let input = "";
 process.stdin.setEncoding("utf8");
@@ -69,27 +68,46 @@ const bin =
 
 const probe = spawnSync(bin, ["version"], { timeout: 5000 });
 if (probe.error || probe.status !== 0) {
-  process.stderr.write("[agent-surface-scan] scanner binary not found; hook allows (fail-open). Install with: go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.1.1\n");
+  process.stderr.write("[agent-surface-scan] scanner binary not found; hook allows (fail-open). Install with: go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.0\n");
   allow();
 }
 
-const res = spawnSync(bin, ["scan", cwd, "--format", "json", "--fail-on", "critical"], {
-  timeout: 20000,
-  maxBuffer: 16 * 1024 * 1024,
-});
+// Fast path: scan only the target file (supported since v0.2.0).
+// Fall back to a full repository scan when the binary predates single-file
+// support or cannot read the file.
+const runScan = (target) =>
+  spawnSync(bin, ["scan", target, "--format", "json", "--fail-on", "critical"], {
+    timeout: 20000,
+    maxBuffer: 16 * 1024 * 1024,
+  });
 
+let res = runScan(filePath);
 let report = null;
 try {
   report = JSON.parse((res.stdout || "").toString("utf8"));
 } catch {
-  // unreadable output: do not block
-  allow();
+  report = null;
+}
+if (!report || typeof report.findings !== "object") {
+  res = runScan(cwd);
+  try {
+    report = JSON.parse((res.stdout || "").toString("utf8"));
+  } catch {
+    // unreadable output: do not block
+    allow();
+  }
 }
 
 const relTarget = relative(cwd, filePath).replaceAll("\\", "/").toLowerCase();
+const baseTarget = basename(filePath).toLowerCase();
 const findings = (report?.findings || []).filter((f) => {
   const fPath = (f.file || "").toLowerCase();
-  return relTarget === fPath || relTarget.endsWith("/" + fPath) || fPath.endsWith("/" + relTarget);
+  return (
+    relTarget === fPath ||
+    relTarget.endsWith("/" + fPath) ||
+    fPath.endsWith("/" + relTarget) ||
+    baseTarget === fPath
+  );
 });
 
 const serious = findings.filter((f) => f.severity === "critical" || f.severity === "high");

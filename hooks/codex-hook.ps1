@@ -34,13 +34,20 @@ if (-not $bin) { $bin = 'surface-scan.exe' }
 
 $probe = & $bin version 2>$null
 if ($LASTEXITCODE -ne 0) {
-  Write-Error "[agent-surface-scan] scanner binary not found; hook allows (fail-open). Install: go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.1.1"
+  Write-Error "[agent-surface-scan] scanner binary not found; hook allows (fail-open). Install: go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.0"
   '{"decision":"approve"}'
   exit 0
 }
 
-$json = & $bin scan $cwd --format json --fail-on critical 2>$null | Out-String
-try { $report = $json | ConvertFrom-Json } catch { '{"decision":"approve"}'; exit 0 }
+# Fast path: scan only the target file (v0.2.0+). Fall back to a repository
+# scan when the binary predates single-file support or cannot read the file.
+$report = $null
+$json = & $bin scan $filePath --format json --fail-on critical 2>$null | Out-String
+try { $report = $json | ConvertFrom-Json } catch { $report = $null }
+if ($null -eq $report -or $null -eq $report.findings) {
+  $json = & $bin scan $cwd --format json --fail-on critical 2>$null | Out-String
+  try { $report = $json | ConvertFrom-Json } catch { '{"decision":"approve"}'; exit 0 }
+}
 
 $target = $filePath.Replace('/', '\').ToLowerInvariant()
 $base = $cwd.TrimEnd('\').ToLowerInvariant()
@@ -49,9 +56,10 @@ if ($target.StartsWith($base + '\')) {
 } else {
   $target = $filePath.Replace('\', '/').ToLowerInvariant()
 }
+$baseName = ([System.IO.Path]::GetFileName($filePath)).ToLowerInvariant()
 $findings = @($report.findings | Where-Object {
   $f = [string]$_.file.ToLowerInvariant()
-  ($target -eq $f) -or ($target.EndsWith('/' + $f)) -or ($f.EndsWith('/' + $target))
+  ($target -eq $f) -or ($target.EndsWith('/' + $f)) -or ($f.EndsWith('/' + $target)) -or ($baseName -eq $f)
 })
 $serious = @($findings | Where-Object { $_.severity -in @('critical','high') })
 if ($serious.Count -eq 0) { '{"decision":"approve"}'; exit 0 }

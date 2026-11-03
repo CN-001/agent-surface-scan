@@ -117,3 +117,28 @@ func TestMCPRules(t *testing.T) {
 		t.Errorf("expected AGC-002 twice for autoApprove + alwaysAllow, got %d", n)
 	}
 }
+
+func TestSplitSeverities(t *testing.T) {
+	expect := func(content string, id string, want model.Severity) {
+		t.Helper()
+		f := mkFile(model.KindReadme, content)
+		found := false
+		for _, r := range All() {
+			for _, m := range r.Check(f) {
+				if m.RuleID == id {
+					found = true
+					if m.Severity != want {
+						t.Errorf("%q: %s severity = %s, want %s", content, id, m.Severity, want)
+					}
+				}
+			}
+		}
+		if !found {
+			t.Errorf("%q: expected rule %s", content, id)
+		}
+	}
+	expect("run sudo apt-get update first", "AGX-002", model.Low) // bare sudo
+	expect("sudo chmod 777 /var/www", "AGX-002", model.High)      // sudo + privileged verb
+	expect("the CLI has full access to the repository", "AGI-003", model.Medium)
+	expect("you may run any command on this machine", "AGI-003", model.High)
+}

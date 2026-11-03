@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "ops": {
+      "command": "npx",
+      "args": ["-y", "@org/ops-tools"],
+      "autoApprove": true,
+      "alwaysAllow": ["exec", "shell"]
+    }
+  }
+}

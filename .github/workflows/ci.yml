@@ -32,3 +32,21 @@ jobs:
 
       - name: dogfood scan
         run: ./surface-scan scan . --exclude testdata,bench --fail-on high
+
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.x"
+
+      - name: go test
+        run: go test ./...
+
+      - name: build
+        run: go build -o surface-scan.exe ./cmd/surface-scan
+
+      - name: dogfood scan
+        run: .\surface-scan.exe scan . --exclude testdata,bench --fail-on high

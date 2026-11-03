@@ -1,0 +1,19 @@
+name: Bug report
+description: Report a bug or a false positive
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Describe the problem or the false positive.
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Steps to reproduce, or a minimal example repository.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: surface-scan version

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-11-03
+
+### Added
+
+- Single-file scanning: `surface-scan scan path/to/README.md` scans one file (hooks use it for a fast path).
+- Rule selection: `--rules id[,id...]` to run only some rules, `--skip-rules` to disable noisy ones, `--min-severity` to hide low-priority findings.
+- Severity tiers for noisy rules: bare `sudo` is now **low** (strong escalation combos stay high), generic `full access` phrasing is **medium**; documented in `bench/known-fp/`.
+- Two more benchmark cases (`05-mcp-always-allow`, `06-npm-remote-install`).
+- Windows CI job (`test-windows`) and repository issue/PR templates.
+- Claude/Codex hooks now scan only the target file first and fall back to a repository scan.
+
+### Changed
+
+- `AGX-002` and `AGI-003` emit per-tier severities instead of one fixed severity.
+
 ## [0.1.1] - 2026-11-03
 
 ### Fixed

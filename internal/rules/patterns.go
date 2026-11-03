@@ -23,14 +23,20 @@ var patternRules = []Rule{
 		`(?i)\b(ignore|bypass|disable|turn off)\s+(all\s+)?(safety|ethics|ethical|guardrails?|content filters?|security policies?|content policy)\b`,
 	),
 
-	patternRule(
-		"AGI-003", "Over-broad autonomy grants", model.High, "ASI03",
+	severityRule(
+		"AGI-003", "Over-broad autonomy grants", "ASI03",
 		"Instructions that grant an agent unrestricted command execution, full access or administrator privileges.",
 		"Scope agent authority explicitly: whitelist commands, paths and tools; replace broad grants with per-task permissions and human approval for sensitive actions.",
-		`(?i)\b(run|execute|invoke)\s+any\s+(command|tool|script|code)\b`,
-		`(?i)\b(full|complete|total)\s+(access|control|permission)\b`,
-		`(?i)\bunrestricted\s+(access|tools?|shell|terminal|permissions?)\b`,
-		`(?i)\b(root|administrator|admin)\s+(access|privileges?|rights)\b`,
+		map[model.Severity][]string{
+			model.High: {
+				`(?i)\b(run|execute|invoke)\s+any\s+(command|tool|script|code)\b`,
+				`(?i)\bunrestricted\s+(access|tools?|shell|terminal|permissions?)\b`,
+				`(?i)\b(root|administrator|admin)\s+(access|privileges?|rights)\b`,
+			},
+			model.Medium: {
+				`(?i)\b(full|complete|total)\s+(access|control|permission)\b`,
+			},
+		},
 	),
 
 	patternRule(
@@ -42,17 +48,24 @@ var patternRules = []Rule{
 		`(?i)\b(powershell|pwsh)\b[^\r\n]{0,60}(-enc(odedcommand)?\s|iex\s|invoke-expression\s)`,
 	),
 
-	patternRule(
-		"AGX-002", "Privilege escalation instructions", model.High, "ASI07",
+	severityRule(
+		"AGX-002", "Privilege escalation instructions", "ASI07",
 		"Instructions to run as administrator/root, loosen execution policy, or otherwise escalate privileges.",
 		"Reject escalation language in agent inputs. Agents must run at the least privilege level required by the task; any escalation must go through a human.",
-		`(?i)\brun\s*as\s*(administrator|admin|root)\b`,
-		`(?i)\bsudo\b`,
-		`(?i)chmod\s+(777|\+x|u\+s)`,
-		`(?i)set-executionpolicy\s+(bypass|unrestricted)`,
-		`(?i)-executionpolicy\s+bypass`,
-		`(?i)\b(uac\s*bypass|bypassuac)\b`,
-		`(?i)\b(-enc|encodedcommand)\s+[a-z0-9+/=]{40,}\b`,
+		map[model.Severity][]string{
+			model.High: {
+				`(?i)\brun\s*as\s*(administrator|admin|root)\b`,
+				`(?i)chmod\s+(777|\+x|u\+s)`,
+				`(?i)set-executionpolicy\s+(bypass|unrestricted)`,
+				`(?i)-executionpolicy\s+bypass`,
+				`(?i)\b(uac\s*bypass|bypassuac)\b`,
+				`(?i)\b(-enc|encodedcommand)\s+[a-z0-9+/=]{40,}\b`,
+				`(?i)\bsudo\s+(bash|sh|zsh|python3?|perl|ruby|node|nc|ncat|nmap|chmod|passwd|rm\s+-rf|curl|wget|dpkg|systemctl|tee)\b`,
+			},
+			model.Low: {
+				`(?i)\bsudo\b`,
+			},
+		},
 	),
 
 	patternRule(

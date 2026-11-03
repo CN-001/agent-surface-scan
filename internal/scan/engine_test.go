@@ -281,3 +281,74 @@ func TestExcludeBackslashPattern(t *testing.T) {
 		}
 	}
 }
+
+func TestSingleFileScan(t *testing.T) {
+	root, err := filepath.Abs(filepath.Join("..", "..", "testdata", "repo"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, err := Run(filepath.Join(root, "README.md"), Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Files != 1 {
+		t.Errorf("single-file scan: files = %d, want 1", rep.Files)
+	}
+	found := false
+	for _, m := range rep.Matches {
+		if m.RuleID == "AGX-001" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("single-file scan: expected AGX-001")
+	}
+
+	// non-agent-facing file produces an empty scan, not an error
+	rep2, err := Run(filepath.Join(root, "src", "main.go"), Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep2.Files != 0 || len(rep2.Matches) != 0 {
+		t.Errorf("single-file scan of non-agent file: files=%d matches=%d, want 0/0", rep2.Files, len(rep2.Matches))
+	}
+}
+
+func TestRuleFilters(t *testing.T) {
+	root, err := filepath.Abs(filepath.Join("..", "..", "testdata", "repo"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	only, err := Run(root, Options{Rules: []string{"AGX-001"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range only.Matches {
+		if m.RuleID != "AGX-001" {
+			t.Errorf("--rules: unexpected rule %s", m.RuleID)
+		}
+	}
+	if only.RuleStats["AGX-001"] == 0 {
+		t.Error("--rules: AGX-001 missing")
+	}
+
+	skip, err := Run(root, Options{SkipRules: []string{"AGS-001"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range skip.Matches {
+		if m.RuleID == "AGS-001" {
+			t.Error("--skip-rules: AGS-001 still present")
+		}
+	}
+
+	sev, err := Run(root, Options{MinSeverity: "critical"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range sev.Matches {
+		if m.Severity != model.Critical {
+			t.Errorf("--min-severity critical: got %s (%s)", m.Severity, m.RuleID)
+		}
+	}
+}

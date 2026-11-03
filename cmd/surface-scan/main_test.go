@@ -41,6 +41,11 @@ func TestParseScanArgsOrder(t *testing.T) {
 			args: []string{"--help"},
 			want: scanFlags{format: "text", failOn: "high", maxMB: 1.0, allowlist: ".surface-scanignore", help: true, root: "."},
 		},
+		{
+			name: "rule filters",
+			args: []string{"--rules", "AGX-001,AGS-001", "--skip-rules", "AGC-004", "--min-severity", "medium", "."},
+			want: scanFlags{format: "text", failOn: "high", maxMB: 1.0, allowlist: ".surface-scanignore", rules: "AGX-001,AGS-001", skipRules: "AGC-004", minSeverity: "medium", root: "."},
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

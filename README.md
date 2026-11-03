@@ -14,10 +14,12 @@ Coding agents trust repository text as instructions. Attackers have moved from a
 
 ## Features
 
-- **17 rules** mapped to the OWASP Agentic Security Initiative (ASI) taxonomy
+- **17 rules** mapped to the OWASP Agentic Security Initiative (ASI) taxonomy, with severity tiers (bare `sudo` = low, real escalation = high)
 - Discovers 6 classes of agent-facing files (instructions, README, contributing/security docs, issue/PR templates, skills, MCP configs, docs)
 - Four output formats: **text, Markdown, JSON, SARIF 2.1.0** (upload straight to GitHub Code Scanning)
 - `--fail-on` CI gate with exit codes; `--exclude` path patterns; `.surface-scanignore` allowlist
+- Rule selection: `--rules`, `--skip-rules`, `--min-severity` for noisy repositories
+- Single-file scanning (`surface-scan scan README.md`) plus directory scanning
 - Inline suppression markers (`surface-scan:ignore`, `surface-scan:ignore-file`)
 - **[Claude Code](hooks/claude-code-hook.mjs) and [Codex](hooks/codex-hook.ps1) hooks** — block the agent from reading flagged files
 - **[DSH plugin](dsh/)** (`agentscan-dsh`) — the `surface_scan` tool + `agentscan` skill inside DeepSeek Harness
@@ -27,7 +29,7 @@ Coding agents trust repository text as instructions. Attackers have moved from a
 ## Install
 
 ```sh
-go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.1.1
+go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.0
 ```
 
 or build from source:
@@ -57,6 +59,13 @@ surface-scan scan . --exclude testdata,examples
 #   testdata *
 #   docs/legacy AGI-003
 surface-scan scan . --allowlist .surface-scanignore
+
+# scan a single file (fast path used by the hooks)
+surface-scan scan path/to/README.md
+
+# tune noisy repositories: only run a rule set, or hide low findings
+surface-scan scan . --rules AGX-001,AGS-001
+surface-scan scan . --skip-rules AGC-004 --min-severity high
 
 # generate a GitHub Actions workflow for this repo
 surface-scan init-ci
@@ -90,9 +99,9 @@ README.md
 |---|---|---|---|
 | AGI-001 | high | ASI01 | Explicit "ignore previous instructions" phrasing |
 | AGI-002 | high | ASI01 | Role flips and guardrail-disabling language |
-| AGI-003 | high | ASI03 | Over-broad autonomy grants (any-command grants, unbounded authority) |
+| AGI-003 | high / medium | ASI03 | Over-broad autonomy grants (any-command grants = high, generic "full access" = medium) |
 | AGX-001 | critical | ASI07 | Remote code execution (download then pipe to a shell, package install from URL) |
-| AGX-002 | high | ASI07 | Privilege escalation phrasing (admin elevation, permissive bits, policy bypass) |
+| AGX-002 | high / low | ASI07 | Privilege escalation phrasing (admin elevation, permissive bits = high; bare `sudo` = low) |
 | AGX-003 | high | ASI07 | Approval / human-in-the-loop bypass |
 | AGE-001 | critical | ASI06 | Data exfiltration instructions (secrets to external endpoints) |
 | AGE-002 | medium | ASI06 | Suspicious webhook / out-of-band endpoints |

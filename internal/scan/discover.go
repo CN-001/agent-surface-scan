@@ -16,6 +16,9 @@ type Options struct {
 	MaxSizeBytes  int64    // skip files larger than this (0 = default 1 MiB)
 	Exclude       []string // path patterns to exclude (slash-separated, glob allowed)
 	AllowlistPath string   // .surface-scanignore style file ("" disables)
+	Rules         []string // only run these rule IDs (empty = all)
+	SkipRules     []string // never run these rule IDs
+	MinSeverity   string   // hide findings below this severity ("" = show all)
 }
 
 // DefaultMaxSizeBytes is the default per-file size limit.

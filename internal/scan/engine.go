@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/CN-001/agent-surface-scan/internal/model"
 	"github.com/CN-001/agent-surface-scan/internal/rules"
@@ -28,18 +29,81 @@ type Report struct {
 }
 
 // Run discovers agent-facing files under root and executes every rule.
+// root may be a directory or a single file.
 func Run(root string, opts Options) (*Report, error) {
 	info, err := os.Stat(root)
 	if err != nil {
 		return nil, fmt.Errorf("scan root %q: %w", root, err)
 	}
-	if !info.IsDir() {
-		return nil, fmt.Errorf("scan root %q is not a directory", root)
+	if info.IsDir() {
+		files, skipped, err := Discover(root, opts)
+		if err != nil {
+			return nil, err
+		}
+		return runCore(root, files, skipped, opts)
 	}
-	files, skipped, err := Discover(root, opts)
+	files, err := scanSingleFile(root, opts)
 	if err != nil {
 		return nil, err
 	}
+	return runCore(filepath.Dir(root), files, nil, opts)
+}
+
+// scanSingleFile loads one file and prepares it for scanning when it is
+// agent-facing. Non-agent-facing files produce an empty scan.
+func scanSingleFile(abs string, opts Options) ([]model.File, error) {
+	rel := filepath.ToSlash(filepath.Base(abs))
+	kind, ok := classify(rel, filepath.Base(abs))
+	if !ok || excluded(rel, opts.Exclude) {
+		return nil, nil
+	}
+	raw, err := os.ReadFile(abs)
+	if err != nil {
+		return nil, fmt.Errorf("read %q: %w", abs, err)
+	}
+	if len(raw) > 0 && raw[0] == 0xEF && len(raw) > 2 && raw[1] == 0xBB && raw[2] == 0xBF {
+		raw = raw[3:]
+	}
+	if looksBinary(raw) || !utf8.Valid(raw) {
+		return nil, nil
+	}
+	text := strings.ReplaceAll(string(raw), "\r\n", "\n")
+	return []model.File{{
+		Path:  rel,
+		Abs:   abs,
+		Kind:  kind,
+		Raw:   text,
+		Lines: strings.Split(text, "\n"),
+	}}, nil
+}
+
+// filterRules applies the --rules / --skip-rules selection.
+func filterRules(all []rules.Rule, opts Options) []rules.Rule {
+	if len(opts.Rules) == 0 && len(opts.SkipRules) == 0 {
+		return all
+	}
+	only := map[string]bool{}
+	for _, id := range opts.Rules {
+		only[id] = true
+	}
+	skip := map[string]bool{}
+	for _, id := range opts.SkipRules {
+		skip[id] = true
+	}
+	out := all[:0]
+	for _, r := range all {
+		if len(only) > 0 && !only[r.ID] {
+			continue
+		}
+		if skip[r.ID] {
+			continue
+		}
+		out = append(out, r)
+	}
+	return out
+}
+
+func runCore(root string, files []model.File, skipped []string, opts Options) (*Report, error) {
 	rep := &Report{
 		Root:      root,
 		ScannedAt: time.Now(),
@@ -52,13 +116,24 @@ func Run(root string, opts Options) (*Report, error) {
 	for _, f := range files {
 		rep.FileKinds[f.Kind]++
 	}
-	rs := rules.All()
-	for _, r := range rs {
+	for _, r := range filterRules(rules.All(), opts) {
 		for i := range files {
 			rep.Matches = append(rep.Matches, r.Check(&files[i])...)
 		}
 	}
 	rep.Matches, rep.Ignored = applyIgnores(files, loadAllowlist(root, opts.AllowlistPath), rep.Matches)
+
+	if opts.MinSeverity != "" && opts.MinSeverity != "info" {
+		if minSev, err := model.ParseSeverity(opts.MinSeverity); err == nil {
+			kept := rep.Matches[:0]
+			for _, m := range rep.Matches {
+				if m.Severity.AtLeast(minSev) {
+					kept = append(kept, m)
+				}
+			}
+			rep.Matches = kept
+		}
+	}
 
 	for _, m := range rep.Matches {
 		rep.Score += m.Severity.Weight()

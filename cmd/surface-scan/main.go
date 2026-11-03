@@ -59,21 +59,27 @@ Scan flags (may appear before or after the path):
   --max-size <MB>                     skip files larger than N MiB (default: 1)
   --exclude <pattern[,pattern...]>    exclude paths (glob or prefix, e.g. testdata,docs)
   --allowlist <file|none>             allowlist file (default: .surface-scanignore)
+  --rules <id[,id...]>                run only these rules (e.g. AGX-001,AGS-001)
+  --skip-rules <id[,id...]>           never run these rules
+  --min-severity <severity>           hide findings below this severity
   --list                              print discovered files and exit
 `)
 }
 
 // scanFlags holds the parsed flags of the scan command.
 type scanFlags struct {
-	format    string
-	outPath   string
-	failOn    string
-	maxMB     float64
-	exclude   string
-	allowlist string
-	list      bool
-	help      bool
-	root      string
+	format      string
+	outPath     string
+	failOn      string
+	maxMB       float64
+	exclude     string
+	allowlist   string
+	rules       string
+	skipRules   string
+	minSeverity string
+	list        bool
+	help        bool
+	root        string
 }
 
 func defaultScanFlags() scanFlags {
@@ -140,6 +146,24 @@ func parseScanArgs(args []string) (scanFlags, error) {
 				return f, err
 			}
 			f.allowlist = v
+		case "--rules":
+			v, err := value("rules")
+			if err != nil {
+				return f, err
+			}
+			f.rules = v
+		case "--skip-rules":
+			v, err := value("skip-rules")
+			if err != nil {
+				return f, err
+			}
+			f.skipRules = v
+		case "--min-severity":
+			v, err := value("min-severity")
+			if err != nil {
+				return f, err
+			}
+			f.minSeverity = v
 		case "--list":
 			f.list = true
 		case "-h", "--help":
@@ -177,6 +201,19 @@ func cmdScan(args []string) int {
 		return 2
 	}
 
+	switch f.format {
+	case "text", "markdown", "json", "sarif":
+	default:
+		fmt.Fprintf(os.Stderr, "unknown format %q\n", f.format)
+		return 2
+	}
+	if f.minSeverity != "" {
+		if _, err := model.ParseSeverity(f.minSeverity); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 2
+		}
+	}
+
 	abs, err := filepath.Abs(f.root)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -194,6 +231,17 @@ func cmdScan(args []string) int {
 	if f.allowlist != "none" && f.allowlist != "" {
 		opts.AllowlistPath = f.allowlist
 	}
+	for _, id := range strings.Split(f.rules, ",") {
+		if id = strings.TrimSpace(id); id != "" {
+			opts.Rules = append(opts.Rules, id)
+		}
+	}
+	for _, id := range strings.Split(f.skipRules, ",") {
+		if id = strings.TrimSpace(id); id != "" {
+			opts.SkipRules = append(opts.SkipRules, id)
+		}
+	}
+	opts.MinSeverity = f.minSeverity
 	if f.list {
 		files, skipped, err := scan.Discover(abs, opts)
 		if err != nil {

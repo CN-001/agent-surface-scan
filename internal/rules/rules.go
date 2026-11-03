@@ -148,3 +148,64 @@ func rawPatternRule(id, title string, sev model.Severity, asi, summary, fix stri
 		},
 	}
 }
+
+// severityRule builds a rule whose patterns carry per-tier severities.
+// When several patterns hit the same line, the strongest severity wins.
+func severityRule(id, title, asi, summary, fix string, tiers map[model.Severity][]string) Rule {
+	type tier struct {
+		sev model.Severity
+		res []*regexp.Regexp
+	}
+	order := []model.Severity{model.Critical, model.High, model.Medium, model.Low, model.Info}
+	var compiled []tier
+	for _, sev := range order {
+		pats := tiers[sev]
+		if len(pats) == 0 {
+			continue
+		}
+		res := make([]*regexp.Regexp, 0, len(pats))
+		for _, p := range pats {
+			res = append(res, regexp.MustCompile(p))
+		}
+		compiled = append(compiled, tier{sev: sev, res: res})
+	}
+	return Rule{
+		ID:       id,
+		Title:    title,
+		Severity: compiled[0].sev,
+		ASI:      asi,
+		Summary:  summary,
+		Fix:      fix,
+		Check: func(f *model.File) []model.Match {
+			type best struct {
+				sev model.Severity
+				h   lineHit
+			}
+			pick := map[int]best{}
+			for _, t := range compiled {
+				for _, re := range t.res {
+					for _, h := range regexLineHits(f, re) {
+						if cur, ok := pick[h.line]; !ok || t.sev.AtLeast(cur.sev) {
+							pick[h.line] = best{sev: t.sev, h: h}
+						}
+					}
+				}
+			}
+			lines := make([]int, 0, len(pick))
+			for l := range pick {
+				lines = append(lines, l)
+			}
+			sort.Ints(lines)
+			var ms []model.Match
+			for _, l := range lines {
+				b := pick[l]
+				ms = append(ms, model.Match{
+					RuleID: id, Title: title, Severity: b.sev, ASI: asi,
+					File: f.Path, Line: b.h.line, Column: b.h.col,
+					Evidence: b.h.text, Message: summary, Fix: fix,
+				})
+			}
+			return ms
+		},
+	}
+}
