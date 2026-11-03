@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "C:/data"],
+      "autoApprove": true
+    }
+  }
+}
