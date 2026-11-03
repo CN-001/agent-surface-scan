@@ -149,6 +149,10 @@ gofmt -l .
 
 This tool is **defensive**: it audits your own repositories and is intended for use inside CI and on authorized code only. The bundled corpus contains only synthetic, minimal samples for detection tests — not weaponized payloads. See [SECURITY.md](SECURITY.md).
 
+## Author
+
+Created and maintained by **Aurox** — GitHub [@CN-001](https://github.com/CN-001).
+
 ## License
 
 [MIT](LICENSE)

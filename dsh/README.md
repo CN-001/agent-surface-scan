@@ -42,3 +42,7 @@ dsh plugin --profile desktop add agentscan-dsh
 - 只读扫描，不执行被检出的内容
 - 找不到二进制时返回安装提示（fail-open，不报错）
 - 默认按 `--fail-on critical` 运行，便于 agent 直接看结果文本
+
+## 维护者
+
+Aurox（GitHub [@CN-001](https://github.com/CN-001)）
