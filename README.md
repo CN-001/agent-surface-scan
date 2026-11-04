@@ -27,6 +27,14 @@ Coding agents trust repository text as instructions. Attackers have moved from a
 - **[False-positive report](docs/false-positive-report.md)** on real repositories: 0 high/critical findings on gin, express, flask, axios and fastapi
 - Pure Go standard library — no runtime dependencies; builds to one binary
 
+## Demo
+
+Scanning the bundled malicious corpus (6 files, 16 findings, exit code 2 — the CI gate working as intended):
+
+![surface-scan demo report](docs/demo.png)
+
+Animated walkthrough: [docs/demo.gif](docs/demo.gif) · Real-repository noise data: [false-positive report](docs/false-positive-report.md)
+
 ## Install
 
 ```sh
