@@ -20,7 +20,7 @@ const SKILL_DIR = join(PACKAGE_ROOT, 'skills', 'agentscan')
 const SKILL_PATH = join(SKILL_DIR, 'SKILL.md')
 
 const INSTALL_HINT = 'surface-scan binary not found. Install it first:\n' +
-  '  go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.1\n' +
+  '  go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.2\n' +
   'or point the plugin at an existing binary via the agentscan.dsh.binaryPath setting.'
 
 function sessionWorkspace(exec) {

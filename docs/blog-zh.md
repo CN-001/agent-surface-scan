@@ -11,7 +11,7 @@ Codex、Claude Code、Cursor、DSH 这类工具会**无条件读取并执行仓�
 于是我写了 [agent-surface-scan](https://github.com/CN-001/agent-surface-scan)：一个零依赖的 Go 单二进制，17 类规则（映射 OWASP ASI），扫 6 类代理上下文文件，输出 SARIF 进 GitHub Code Scanning，还带 Claude/Codex hooks 和 DSH 插件。
 
 ```sh
-go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.1
+go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.2
 surface-scan scan . --fail-on high   # 有高危发现时退出码 2
 ```
 

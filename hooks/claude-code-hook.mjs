@@ -68,7 +68,7 @@ const bin =
 
 const probe = spawnSync(bin, ["version"], { timeout: 5000 });
 if (probe.error || probe.status !== 0) {
-  process.stderr.write("[agent-surface-scan] scanner binary not found; hook allows (fail-open). Install with: go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.1\n");
+  process.stderr.write("[agent-surface-scan] scanner binary not found; hook allows (fail-open). Install with: go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.2\n");
   allow();
 }
 

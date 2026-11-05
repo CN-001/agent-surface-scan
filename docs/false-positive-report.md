@@ -1,6 +1,6 @@
 # False-positive report — real repositories
 
-**Date:** 2026-11-03 · **Scanner:** `surface-scan` v0.2.1 · **Method:** shallow clones of five popular
+**Date:** 2026-11-03 · **Scanner:** `surface-scan` v0.2.2 · **Method:** shallow clones of five popular
 repositories scanned with `--fail-on high` (the recommended CI setting).
 
 ## Headline result
@@ -35,7 +35,7 @@ passes on all five repos.
 None of them fail `--fail-on high`, so they cost nothing in CI; they appear only when a
 human asks for the full report.
 
-## Rule changes driven by this data (v0.2.1)
+## Rule changes driven by this data (v0.2.2)
 
 - **AGX-001** — package-manager patterns now require an install verb immediately followed
   by argument tokens and the URL (`npm install <url>`), so markdown links and badges

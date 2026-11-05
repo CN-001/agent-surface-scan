@@ -37,17 +37,40 @@ Animated walkthrough: [docs/demo.gif](docs/demo.gif) · Real-repository noise da
 
 ## Install
 
-```sh
-go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.1
+**No Go required** — download a prebuilt binary from [Releases](https://github.com/CN-001/agent-surface-scan/releases):
+
+| Platform | File |
+|---|---|
+| Windows x64 | `surface-scan_windows_amd64.exe` |
+| Linux x64 / arm64 | `surface-scan_linux_amd64` / `surface-scan_linux_arm64` |
+| macOS Intel / Apple Silicon | `surface-scan_darwin_amd64` / `surface-scan_darwin_arm64` |
+
+```powershell
+# Windows: download and run
+curl.exe -LO https://github.com/CN-001/agent-surface-scan/releases/latest/download/surface-scan_windows_amd64.exe
+.\surface-scan_windows_amd64.exe scan . --fail-on high
 ```
 
-or build from source:
+With Go 1.24+:
+
+```sh
+go install github.com/CN-001/agent-surface-scan/cmd/surface-scan@v0.2.2
+```
+
+Or build from source:
 
 ```sh
 git clone https://github.com/CN-001/agent-surface-scan.git
 cd agent-surface-scan
 go build -o surface-scan ./cmd/surface-scan
 ```
+
+> **Scanning this repository?** It ships an intentionally malicious sample corpus.
+> Exclude it (or use `.surface-scanignore`): `surface-scan scan . --exclude testdata,bench`
+> 
+> **Troubleshooting:** if `go build` fails with `mkdir ...\Temp\go-build...: Access is denied`,
+> point `GOTMPDIR` at a writable directory. Vendored SDK/cache directories
+> (`toolchains/`, `gopath/`, `.gocache/`, `node_modules/`, …) are skipped automatically.
 
 ## Usage
 

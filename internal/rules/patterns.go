@@ -80,8 +80,8 @@ var patternRules = []Rule{
 		"AGE-001", "Data exfiltration instructions", model.Critical, "ASI06",
 		"Instructions to send secrets, credentials or other sensitive data to external endpoints (webhooks, pastebins, chat bots).",
 		"Treat any instruction that pairs secret-like identifiers with an external URL as hostile. Block outbound delivery of credentials by default and log every such attempt.",
-		`(?i)\b(send|upload|post|exfiltrate|export|transmit|deliver|submit)\s+[^\r\n]{0,120}\b(webhooks?|hooks?|pastebin|discord|telegram|slack|interact\.sh|oast|requestbin|webhook\.site|ngrok|collaborator|canarytokens?|beeceptor|pipedream|burp)\b`,
-		`(?i)\b(api[_-]?keys?|access[_-]?tokens?|\.env|auth\.json|id_rsa|private keys?|wallets?|mnemonics?)\b[^\r\n.]{0,60}https?://[^\s"')\]]+`,
+		`(?i)\b(send|upload|post|exfiltrate|export|transmit|deliver|submit|leak|dump|copy|transfer)\s+[^\r\n]{0,120}\b(webhooks?|hooks?|pastebin|discord|telegram|slack|interact\.sh|oast|requestbin|webhook\.site|ngrok|collaborator|canarytokens?|beeceptor|pipedream|burp)\b`,
+		`(?i)\b(send|upload|post|exfiltrate|export|transmit|deliver|submit|leak|dump|copy|transfer)\b[^\r\n]{0,80}\b(api[_-]?keys?|access[_-]?tokens?|\.env|auth\.json|id_rsa|private keys?|wallets?|mnemonics?)\b[^\r\n.]{0,60}https?://[^\s"')\]]+`,
 	),
 
 	patternRule(

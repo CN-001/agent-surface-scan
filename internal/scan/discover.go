@@ -31,6 +31,10 @@ var skipDirs = map[string]bool{
 	".cache": true, ".idea": true, ".vscode": true, "coverage": true, ".dart_tool": true,
 	"Pods": true, ".gradle": true, ".terraform": true, "bower_components": true,
 	".turbo": true, ".parcel-cache": true,
+	// Vendored toolchains / package caches are not agent-facing context.
+	".gocache": true, ".gomodcache": true, "go-build": true, "goroot": true,
+	"gopath": true, "toolchains": true, ".cargo": true, ".m2": true, ".nuget": true,
+	".pub-cache": true, "site-packages": true, ".tox": true, ".nox": true,
 }
 
 // exactAgentFiles maps basenames to their kind.

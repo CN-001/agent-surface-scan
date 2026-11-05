@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-11-05
+
+### Added
+
+- **Prebuilt binaries** for Windows x64, Linux x64/arm64 and macOS Intel/Apple Silicon — no Go toolchain needed.
+- Release workflow (`.github/workflows/release.yml`) that builds and uploads all binaries on every `v*` tag.
+
+### Fixed
+
+- `AGE-001`: the secret+URL pattern now requires an exfiltration verb in the same line, so configuration docs like `config set gemini-api.apiKey <key> # free key: https://…` are no longer reported (reported from a real user workspace).
+- Vendored toolchain/cache directories are skipped by default: `toolchains/`, `gopath/`, `goroot/`, `.gocache/`, `.gomodcache/`, `.cargo/`, `.m2/`, `.nuget/`, `site-packages/`, `.tox/`, `.nox/`, `.pub-cache/`, `go-build/`.
+- README: install-without-Go instructions, `GOTMPDIR` troubleshooting and a note that the bundled sample corpus must be excluded when scanning this repository itself.
+
 ## [0.2.1] - 2026-11-03
 
 ### Fixed
